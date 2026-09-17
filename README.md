@@ -2,7 +2,7 @@
 
 Interactive academic tool for **Banker's Algorithm** safety analysis and **Monte Carlo** collapse-probability estimation under pandemic-like hospital workload conditions.
 
-(live demo: https://pandemic-healthcare-stability-lab.onrender.com/)
+(live demo: [https://pandemic-healthcare-stability-lab.onrender.com/](https://hospital-resource-stability-and-risk.onrender.com/))
 
 ## Problem Statement
 
