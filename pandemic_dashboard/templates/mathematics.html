@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% set active_page = "mathematics" %}
+
+{% block title %}Mathematics Reference: Hospital Resource Stability Lab{% endblock %}
+{% block subtitle %}Formal definitions, algorithms, and statistical methods{% endblock %}
+
+{% block content %}
+<section class="section math-hero">
+  <h2>Mathematical Foundations</h2>
+  <p class="section-desc">
+    Reference for the resource-allocation model, Banker's safety algorithm, and Monte Carlo
+    collapse estimation used in the simulator. Notation follows standard operating-systems
+    literature (Dijkstra, 1965).
+  </p>
+</section>
+
+<nav class="math-toc section" aria-label="Mathematics sections">
+  <h3>On this page</h3>
+  <ol>
+    <li><a href="#resource-model">Resource allocation model</a></li>
+    <li><a href="#bankers">Banker's safety algorithm</a></li>
+    <li><a href="#monte-carlo">Monte Carlo estimation</a></li>
+    <li><a href="#wilson">Wilson confidence interval</a></li>
+    <li><a href="#demand">Patient demand generation</a></li>
+    <li><a href="#phase2">Phase 2 time-dependent model</a></li>
+    <li><a href="#phase3">Phase 3 empirical calibration</a></li>
+  </ol>
+</nav>
+
+<section class="section math-block" id="resource-model">
+  <h2>1. Resource Allocation Model</h2>
+  <p>Each admitted patient <em>i</em> is a process with <em>m</em> resource types:</p>
+  <div class="formula-card">
+    <p><strong>Allocation</strong> &nbsp; A[i,j] &mdash; units of resource <em>j</em> currently held by patient <em>i</em></p>
+    <p><strong>Maximum claim</strong> &nbsp; Max[i,j] &mdash; maximum units patient <em>i</em> may ever require</p>
+    <p><strong>Need</strong> &nbsp; Need[i,j] = Max[i,j] &minus; A[i,j]</p>
+    <p><strong>Available</strong> &nbsp; Avail[j] &mdash; free units of resource <em>j</em></p>
+  </div>
+  <h3>Invariants</h3>
+  <ul class="math-list">
+    <li>0 &le; A[i,j] &le; Max[i,j] for all <em>i, j</em></li>
+    <li>Need[i,j] &ge; 0 for all <em>i, j</em></li>
+    <li>Total[j] = Avail[j] + &Sigma;<sub>i</sub> A[i,j]</li>
+  </ul>
+  <p class="note">Hospital mapping: patients &rarr; processes; ICU beds, oxygen, ventilators, nurses, blood units &rarr; resource types.</p>
+</section>
+
+<section class="section math-block" id="bankers">
+  <h2>2. Banker's Safety Algorithm</h2>
+  <p>A state is <strong>SAFE</strong> if there exists an ordering in which every patient can complete without exhausting resources.</p>
+  <div class="formula-card">
+    <pre class="algo">Work  &larr; Available
+Finish[i] &larr; false  for all patients i
+
+repeat
+    find i such that Finish[i] = false  AND  Need[i] &le; Work
+    if found:
+        Work  &larr; Work + Allocation[i]
+        Finish[i] &larr; true
+    else:
+        return UNSAFE
+until all Finish[i] = true
+return SAFE</pre>
+  </div>
+  <p>Vector comparison: Need[i] &le; Work means Need[i,j] &le; Work[j] for every resource <em>j</em>.</p>
+  <p>A <strong>safe sequence</strong> is the order in which patients complete during the algorithm.</p>
+</section>
+
+<section class="section math-block" id="monte-carlo">
+  <h2>3. Monte Carlo Collapse Estimation</h2>
+  <p>For each patient count <em>n</em> = 1, 2, &hellip;, <em>N</em>, run <em>T</em> independent trials. Each trial:</p>
+  <ol class="math-list">
+    <li>Sample <em>n</em> patients with stochastic severity and demand vectors.</li>
+    <li>Attempt sequential admission (allocate initial resources).</li>
+    <li>Run Banker's algorithm on the resulting state.</li>
+  </ol>
+  <div class="formula-card">
+    <p><strong>Admission failure:</strong> trial stops when a patient's initial allocation exceeds Avail.</p>
+    <p><strong>Unsafe state:</strong> all <em>n</em> admitted but Banker's returns UNSAFE.</p>
+    <p><strong>Collapse:</strong> admission failure <strong>or</strong> unsafe state.</p>
+    <p class="formula-center">P&#770;(collapse | n) = K<sub>n</sub> / T</p>
+    <p>where K<sub>n</sub> is the number of collapsed trials at load <em>n</em>. n<sub>50</sub> = min { n tested : P&#770;(n) &ge; 0.50 } (discrete; no interpolation).</p>
+  </div>
+</section>
+
+<section class="section math-block" id="wilson">
+  <h2>4. Wilson Score Confidence Interval</h2>
+  <p>95% confidence interval for a binomial proportion <em>p</em> (Wilson, 1927):</p>
+  <div class="formula-card">
+    <p class="formula-center">p&#770; = K / T</p>
+    <p class="formula-center">centre = (p&#770; + z&sup2;/2T) / (1 + z&sup2;/T)</p>
+    <p class="formula-center">half-width = z / (1 + z&sup2;/T) &middot; &radic;(p&#770;(1&minus;p&#770;)/T + z&sup2;/4T&sup2;)</p>
+    <p class="formula-center">CI = [centre &minus; half-width, centre + half-width]</p>
+    <p class="note">Implementation uses z = 1.96 (nominal 95%). Intervals are approximate and assume independent trials.</p>
+  </div>
+</section>
+
+<section class="section math-block" id="demand">
+  <h2>5. Patient Demand Generation</h2>
+  <p>For severity tier <em>s</em>, each resource <em>j</em> has configured bounds [min<sub>s,j</sub>, max<sub>s,j</sub>]:</p>
+  <div class="formula-card">
+    <p>Max[i,j] ~ Uniform(min<sub>s,j</sub>, max<sub>s,j</sub>)</p>
+    <p>A[i,j] ~ Uniform(min<sub>s,j</sub>, Max[i,j])</p>
+    <p>ICU beds and ventilators: binary (0 or 1 unit per patient).</p>
+  </div>
+  <p>Severity tier is sampled from a categorical distribution (normalized user weights in the UI).</p>
+</section>
+
+<section class="section math-block" id="phase2">
+  <h2>6. Phase 2: Time-Dependent Hospital Model</h2>
+  <p>Discrete time with configurable step <em>&Delta;t</em> (default 1 hour). Capacity is a vector process <em>C(t)</em>. Banker's algorithm is unchanged and is evaluated on the in-care allocation snapshot at each <em>t</em>.</p>
+  <div class="formula-card">
+    <p>W(t) = C(t) &minus; A<sub>total</sub>(t), &nbsp; W(t) &ge; 0 component-wise</p>
+    <p>C(t) = W(t) + A<sub>total</sub>(t)</p>
+    <p>NurseCapacity(t) = round(BaseNurses &times; m<sub>shift</sub>(t) &times; m<sub>weekend</sub>(t))</p>
+    <p>effective LOS = base LOS &times; (1 + &alpha;) while the fatigue state is active</p>
+    <p>overflow acuity: a(t + &Delta;t) = a(t) + r &Delta;t</p>
+  </div>
+  <h3>Staffing (model assumptions)</h3>
+  <p>m<sub>shift</sub> equals the handover multiplier during configured handover hours and 1 otherwise. m<sub>weekend</sub> equals the weekend multiplier on configured weekend days and 1 otherwise. Calendar convention: <em>t</em> = 0 is Monday 00:00. These multipliers are sensitivity parameters, not measured staffing facts.</p>
+  <h3>Capacity transitions</h3>
+  <p>If C<sub>j</sub>(t) would fall below current A<sub>total,j</sub>, the model overflows lowest-priority in-care patients (explicit Allocation release) until A<sub>total</sub> &le; C(t). Holdings are never silently destroyed.</p>
+  <h3>Treatment bundles</h3>
+  <p>A patient enters WARD or ICU only if every component of the pathway requirement is available (all-or-nothing). Failure places the patient in ED_OVERFLOW. Overflow is not automatic system collapse; Banker's SAFE/UNSAFE is recorded separately.</p>
+  <h3>Triage</h3>
+  <p>Deterministic rank: Critical &lt; Severe &lt; Moderate &lt; Mild (lower rank admitted first), then earlier arrival, then patient id.</p>
+  <h3>Preemption</h3>
+  <p>Acuity-based preemption of in-care patients is <strong>not</strong> implemented. Removing Allocation without a defined remaining Max/Need would make Banker's semantics ambiguous. That remains future work.</p>
+</section>
+
+<section class="section math-block" id="phase3">
+  <h2>7. Phase 3: Empirical Calibration</h2>
+  <p>External series are ingested through a cache/fallback layer. The Banker's core is unchanged. Every quantity is labeled:</p>
+  <ul class="math-list">
+    <li><strong>REAL OBSERVATION</strong> — published or downloaded measurements</li>
+    <li><strong>MODEL ASSUMPTION</strong> — chosen mapping not identified from microdata</li>
+    <li><strong>DERIVED PARAMETER</strong> — transform of observations (rates, fitted families)</li>
+    <li><strong>SIMULATED VALUE</strong> — Monte Carlo draws or offline fixtures</li>
+  </ul>
+  <h3>Arrivals</h3>
+  <p>Daily counts are compared with Poisson and negative binomial using mean, variance, dispersion D = s<sup>2</sup>/x̄ (diagnostic, not a proof), log-likelihood, and AIC. Poisson is not assumed. Negative binomial uses the NB2 / Gamma–Poisson parameterization (mean μ, size θ; Var = μ + μ²/θ). The hospital-scale mean λ<sub>0</sub> remains a model assumption (configured arrivals per step). Empirical weekday relatives give λ(t) = λ<sub>0</sub> r<sub>dow(t)</sub> in dynamic Model C only. National daily_mean/24 is not this hospital's arrival process.</p>
+  <h3>LOS</h3>
+  <p>Patient-level LoS records are not ingested. Rees et al. (2020) outside-China Q25/Q50/Q75 are used for <strong>quantile-based distribution reconstruction</strong>, not maximum-likelihood fitting. Candidates (Gamma, Weibull, Lognormal) are scored by quantile reconstruction SSE = &Sigma; (Q<sub>model</sub> &minus; Q<sub>obs</sub>)<sup>2</sup> on those three points. This is not a formal goodness-of-fit test. Gamma predicted quantiles use the Wilson&ndash;Hilferty approximation, so that family's SSE is not on identical exact-quantile footing. The selected family is sampled in the <em>dynamic</em> Model C run (days &times; 24 hours), not in the static Banker's collapse sweep.</p>
+  <h3>Model A / B / C (executable scope)</h3>
+  <ul class="math-list">
+    <li><strong>Experiment family A — Static Banker collapse:</strong> A = independent demand; B = joint ICU/vent given severity; C = same demand as B. Arrival and LOS do not affect n<sub>50</sub>. Do not call this a fully calibrated collapse model.</li>
+    <li><strong>Experiment family B — Dynamic empirically informed simulation:</strong> A and B use configured arrivals and uniform LOS; C uses calibrated arrival family, weekday λ(t), and quantile-reconstructed LOS. Not individual-hospital census.</li>
+  </ul>
+  <h3>External signal</h3>
+  <p>f(X) = clip(X / 50000, 0.5, 3.0) scales the Monte Carlo patient ceiling only. X is latest-available public smoothed cases. The reference 50000 and clip bounds are model assumptions, not hospital truth, and were not empirically learned. See docs/MATHEMATICAL_MODEL.md.</p>
+  <h3>n<sub>50</sub></h3>
+  <p>n<sub>50</sub> = min { n tested : p&#770;(n) &ge; 0.50 }. Discrete; no interpolation. Elasticity &epsilon;<sub>k</sub> inherits Monte Carlo variability in n<sub>50</sub>.</p>
+  <h3>Dependence</h3>
+  <p>National hospital vs mechanical-ventilation occupancy may be correlated. That is not a within-patient copula. Model B (static) samples ICU and ventilator jointly given severity. A copula is <strong>not</strong> used.</p>
+  <h3>Uncertainty</h3>
+  <p>Wilson intervals: simulation uncertainty under a fixed model. Arrival-mean interval is an <strong>IID percentile bootstrap</strong> and does not preserve time-series dependence. &plusmn;5/10/20% sweeps: parameter sensitivity. Neither is a real-world forecast interval for a named hospital.</p>
+</section>
+{% endblock %}

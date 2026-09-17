@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Hospital Resource Stability Lab{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <h1>Hospital Resource Stability Lab</h1>
+      <p class="subtitle" id="siteSubtitle">{% block subtitle %}Banker's Algorithm resource safety analysis{% endblock %}</p>
+    </div>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" class="nav-link{% if active_page == 'simulator' %} active{% endif %}">Simulator</a>
+      <a href="/mathematics" class="nav-link{% if active_page == 'mathematics' %} active{% endif %}">Mathematics</a>
+      <a href="mailto:hmfrdanish5@gmail.com" class="nav-link">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p>Hospital Resource Stability Lab &middot; Banker's Algorithm &middot; Monte Carlo estimation</p>
+  <p class="footer-links">
+    Contact: <a href="mailto:hmfrdanish5@gmail.com">hmfrdanish5@gmail.com</a>
+    &middot;
+    <a href="https://github.com/hmfrdanish5" target="_blank" rel="noopener">GitHub</a>
+  </p>
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

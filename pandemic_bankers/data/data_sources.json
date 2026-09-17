@@ -1,0 +1,81 @@
+{
+  "access_date": "2026-09-11",
+  "classification_note": "Each record states whether values are REAL OBSERVATION, MODEL ASSUMPTION, DERIVED PARAMETER, or SIMULATED VALUE.",
+  "sources": [
+    {
+      "id": "owid_covid",
+      "dataset": "Our World in Data COVID-19 Dataset",
+      "dataset_title": "COVID-19 Dataset (OWID)",
+      "publisher": "Our World in Data / Global Change Data Lab",
+      "url": "https://github.com/owid/covid-19-data",
+      "download_url": "https://covid.ourworldindata.org/data/owid-covid-data.csv",
+      "access_date": "2026-09-11",
+      "update_frequency": "Periodically updated public files; not a live hospital feed",
+      "geographic_scope": "Country-day panel; this project uses iso_code GBR (hospital fields) and OWID_WRL (optional case signal)",
+      "units": "counts (cases, patients, weekly admissions)",
+      "variables_used": [
+        "date",
+        "iso_code",
+        "new_cases_smoothed",
+        "weekly_hosp_admissions",
+        "hosp_patients",
+        "icu_patients"
+      ],
+      "frequency": "Daily (some hospital fields are weekly or intermittently reported)",
+      "access_method": "HTTPS CSV; streamed and filtered to selected iso_code",
+      "license": "CC-BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "current_vs_historical": "Historical time series that is periodically updated. NOT real-time occupancy of any named hospital.",
+      "relevant_fields": "Hospital admissions and ICU occupancy as national aggregates; new_cases_smoothed as an epidemiological pressure signal only.",
+      "notes": "National aggregates are not this model's five-resource hospital. Transformations to hourly arrival rates are DERIVED."
+    },
+    {
+      "id": "ukhsa_coronavirus_api",
+      "dataset": "UK Coronavirus Dashboard national overview",
+      "dataset_title": "Coronavirus (COVID-19) in the UK — national metrics",
+      "publisher": "UK Health Security Agency / UK Government",
+      "url": "https://coronavirus.data.gov.uk/",
+      "download_url": "https://api.coronavirus.data.gov.uk/v1/data?filters=areaType=overview&structure=%7B%22date%22:%22date%22,%22newAdmissions%22:%22newAdmissions%22,%22hospitalCases%22:%22hospitalCases%22,%22covidOccupiedMVBeds%22:%22covidOccupiedMVBeds%22%7D",
+      "access_date": "2026-09-11",
+      "update_frequency": "Historical dashboard API; reporting has largely ended",
+      "geographic_scope": "United Kingdom national overview (not a single hospital)",
+      "units": "daily counts (admissions, hospital cases, MV beds)",
+      "variables_used": [
+        "date",
+        "newAdmissions",
+        "hospitalCases",
+        "covidOccupiedMVBeds"
+      ],
+      "frequency": "Daily",
+      "access_method": "HTTPS JSON API",
+      "license": "Open Government Licence v3.0",
+      "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+      "current_vs_historical": "Historical public-health series. NOT live census of a single hospital.",
+      "notes": "Preferred arrival/occupancy source when reachable. If unavailable, the pipeline uses cache then a labeled synthetic fixture."
+    },
+    {
+      "id": "rees_2020_los",
+      "dataset": "COVID-19 length of hospital stay: a systematic review and data synthesis",
+      "dataset_title": "COVID-19 length of hospital stay (summary distributions)",
+      "publisher": "BMC Medicine (Springer Nature); authors Rees EM et al.",
+      "url": "https://doi.org/10.1186/s12916-020-01726-3",
+      "access_date": "2026-09-11",
+      "update_frequency": "Static publication (2020)",
+      "geographic_scope": "Pooled studies; this project uses outside-China summaries",
+      "units": "days (published Q25/Q50/Q75)",
+      "coverage": "52 studies (mostly China); summary LoS for hospital and ICU, China vs outside China. Early-pandemic evidence (2020).",
+      "variables_used": [
+        "median hospital LoS outside China",
+        "IQR hospital LoS outside China",
+        "median ICU LoS outside China",
+        "IQR ICU LoS outside China"
+      ],
+      "frequency": "Not a time series; pooled study summaries",
+      "access_method": "Open-access article (CC-BY 4.0); statistics transcribed into literature_los.json",
+      "license": "CC-BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "current_vs_historical": "Historical published evidence (2020). Not current local hospital LoS.",
+      "notes": "This project does not ingest patient-level LoS records. Fitted Gamma/Weibull/Lognormal parameters are DERIVED from published median and IQR."
+    }
+  ]
+}

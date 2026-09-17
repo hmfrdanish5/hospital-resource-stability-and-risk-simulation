@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+venv/
+.venv/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Project outputs
+pandemic_bankers/collapse_probability_curve.png
+pandemic_bankers/stability_curve.png
+pandemic_bankers/resource_utilization_at_collapse.png
+pandemic_bankers/stability_report.json
+pandemic_bankers/data/cache/*.json
+
+# Runtime / local data
+pandemic_dashboard/data/*
+!pandemic_dashboard/data/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+
+# Nested clone (local mirror of the GitHub repo — do not publish inside the project)
+pandemic-healthcare-stability-lab/
+
+# Environment
+.env
+.env.*
+
+# OS
+Thumbs.db
+.DS_Store

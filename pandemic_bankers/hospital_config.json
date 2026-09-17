@@ -1,0 +1,85 @@
+{
+  "hospital": {
+    "name": "Hospital Resource Allocation Model",
+    "total_beds": 200,
+    "random_seed": 42,
+    "max_patients": 80
+  },
+  "resources": {
+    "names": ["ICU_Beds", "Oxygen_Units", "Ventilators", "Nurses", "Blood_Units"],
+    "baseline": [8, 60, 8, 25, 75],
+    "surge":    [14, 90, 14, 35, 120]
+  },
+  "severity_distributions": {
+    "normal": {
+      "Mild":     0.80,
+      "Moderate": 0.10,
+      "Severe":   0.07,
+      "Critical": 0.03
+    },
+    "surge": {
+      "Mild":     0.60,
+      "Moderate": 0.15,
+      "Severe":   0.15,
+      "Critical": 0.10
+    }
+  },
+  "demand_profiles": {
+    "Mild":     {"min": [0, 1, 0, 0, 0], "max": [0, 3, 0, 1, 1]},
+    "Moderate": {"min": [0, 3, 0, 1, 1], "max": [0, 6, 0, 2, 2]},
+    "Severe":   {"min": [0, 6, 0, 2, 2], "max": [1, 12, 1, 3, 4]},
+    "Critical": {"min": [1, 10, 1, 3, 3], "max": [1, 20, 1, 5, 6]}
+  },
+  "simulation": {
+    "mode": "surge",
+    "severity_mode": "surge"
+  },
+  "external_signal": {
+    "classification": "MODEL_ASSUMPTION",
+    "formula": "f(X) = clip(X / X_ref, f_min, f_max)",
+    "X": "14-day mean of OWID global new_cases_smoothed when available",
+    "X_ref": 50000,
+    "clip_min": 0.5,
+    "clip_max": 3.0,
+    "note": "X_ref and clip bounds are normalization choices, not hospital occupancy. Used only to scale the Monte Carlo patient ceiling. Not empirically learned."
+  },
+  "dynamic_model": {
+    "parameter_status": "MODEL ASSUMPTIONS: staffing multipliers, LOS ranges, fatigue thresholds, and degradation rates are configurable sensitivity parameters, not measured clinical facts.",
+    "dt_hours": 1,
+    "horizon_hours": 48,
+    "arrivals_per_step": 2,
+    "staffing": {
+      "resource_name": "Nurses",
+      "normal_multiplier": 1.0,
+      "handover_multiplier": 0.80,
+      "weekend_multiplier": 0.90,
+      "handover_hours": [7, 19],
+      "weekend_days": [5, 6]
+    },
+    "los_hours": {
+      "Mild": {"min": 4, "max": 12},
+      "Moderate": {"min": 8, "max": 24},
+      "Severe": {"min": 24, "max": 48},
+      "Critical": {"min": 48, "max": 96}
+    },
+    "fatigue": {
+      "utilization_threshold": 0.80,
+      "consecutive_hours": 4,
+      "recovery_hours": 2,
+      "delay_factor_alpha": 0.15
+    },
+    "degradation": {
+      "rate_per_hour": 0.05
+    },
+    "treatment_pathways": {
+      "severity_pathway": {
+        "Mild": "WARD",
+        "Moderate": "WARD",
+        "Severe": "ICU",
+        "Critical": "ICU"
+      },
+      "WARD": {"target_state": "WARD", "required": [0, 1, 0, 1, 0]},
+      "ICU": {"target_state": "ICU", "required": [1, 4, 1, 2, 0]}
+    }
+  }
+}

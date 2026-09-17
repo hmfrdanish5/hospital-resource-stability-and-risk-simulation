@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% set active_page = "simulator" %}
+
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div class="sim-shell">
+
+  <!-- Shared configuration (always visible) -->
+  <aside class="config-sidebar panel" id="section-config">
+    <div class="panel-header">
+      <h2>Configuration</h2>
+      <button type="button" id="btnRandomize" class="btn btn-secondary btn-small" title="Fill the form with random valid inputs. Does not run a simulation.">Randomize</button>
+    </div>
+
+    <fieldset class="fieldset">
+      <legend>Hospital Resources</legend>
+      <div class="field">
+        <label for="icu_beds">ICU Beds
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Total ICU bed capacity. Binary per patient (0 or 1). Collapse often begins when critical patients exhaust this pool.</span></span>
+        </label>
+        <input type="number" id="icu_beds" min="1" max="100" value="14" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="oxygen_units">Oxygen Units
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Total oxygen flow capacity (abstract units). Multi-unit per patient; often the first resource to saturate under surge.</span></span>
+        </label>
+        <input type="number" id="oxygen_units" min="1" max="500" value="90" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="ventilators">Ventilators
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Mechanical ventilator pool. Binary per patient (0 or 1). Critical-tier patients require at least one at peak demand.</span></span>
+        </label>
+        <input type="number" id="ventilators" min="1" max="100" value="14" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="nurses">Nurses
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Staffing units available for allocation. Modeled as divisible units (partial nurse allocation per patient).</span></span>
+        </label>
+        <input type="number" id="nurses" min="1" max="200" value="35" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="blood_units">Blood Units
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Transfusion / blood-product capacity in abstract units. Demand scales with severity tier.</span></span>
+        </label>
+        <input type="number" id="blood_units" min="1" max="500" value="120" data-live="mc">
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>Severity Distribution
+        <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Probability mix of patient severity tiers. Values are normalized to 100% on submission. Higher critical share increases resource pressure.</span></span>
+      </legend>
+      <div class="field">
+        <label for="sev_mild">Mild (%)</label>
+        <input type="number" id="sev_mild" min="0" max="100" value="60" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="sev_moderate">Moderate (%)</label>
+        <input type="number" id="sev_moderate" min="0" max="100" value="15" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="sev_severe">Severe (%)</label>
+        <input type="number" id="sev_severe" min="0" max="100" value="15" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="sev_critical">Critical (%)</label>
+        <input type="number" id="sev_critical" min="0" max="100" value="10" data-live="mc">
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>Shared Parameters</legend>
+      <div class="field">
+        <label for="seed">Random seed
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Fixes the pseudo-random sequence for reproducible patient demand and Monte Carlo trials.</span></span>
+        </label>
+        <input type="number" id="seed" value="42" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="max_patients">Max patients (MC / sensitivity)
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Upper bound n for Monte Carlo and sensitivity sweeps.</span></span>
+        </label>
+        <input type="number" id="max_patients" min="5" max="200" value="60" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="trials_per_n">Trials per n
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Independent stochastic trials at each patient count.</span></span>
+        </label>
+        <input type="number" id="trials_per_n" min="5" max="200" value="30" data-live="mc">
+      </div>
+      <div class="field">
+        <label for="horizon_hours">Horizon (hours)
+          <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Phase 2 discrete-time run length.</span></span>
+        </label>
+        <input type="number" id="horizon_hours" min="8" max="168" value="48">
+      </div>
+      <div class="field">
+        <label for="arrivals_per_step">Arrivals per hour</label>
+        <input type="number" id="arrivals_per_step" min="0" max="10" value="2">
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>External Data Signal
+        <span class="info-tip" tabindex="0"><span class="info-icon">i</span><span class="info-card">Uses latest available public epidemiological data as a workload scaling factor.</span></span>
+      </legend>
+      <label class="checkbox-field">
+        <input type="checkbox" id="useExternalSignal">
+        <span>Apply to Monte Carlo</span>
+      </label>
+      <button type="button" id="btnLoadExternal" class="btn btn-secondary btn-small">Load signal</button>
+      <div id="externalDataPanel" class="external-panel compact">
+        <p class="placeholder">Optional — load before running Monte Carlo.</p>
+      </div>
+    </fieldset>
+  </aside>
+
+  <!-- Main workspace: tabs + active panel -->
+  <div class="sim-main">
+
+    <div class="sim-toolbar">
+      <nav class="sim-tabs" role="tablist" aria-label="Simulator views">
+        <button type="button" class="sim-tab active" role="tab" aria-selected="true" aria-controls="panel-bankers" data-tab="bankers">Banker's</button>
+        <button type="button" class="sim-tab" role="tab" aria-selected="false" aria-controls="panel-mc" data-tab="mc">Monte Carlo</button>
+        <button type="button" class="sim-tab" role="tab" aria-selected="false" aria-controls="panel-experiment" data-tab="experiment">MC Experiment</button>
+        <button type="button" class="sim-tab" role="tab" aria-selected="false" aria-controls="panel-sensitivity" data-tab="sensitivity">Sensitivity</button>
+        <button type="button" class="sim-tab" role="tab" aria-selected="false" aria-controls="panel-timemodel" data-tab="timemodel">Time Model</button>
+        <button type="button" class="sim-tab" role="tab" aria-selected="false" aria-controls="panel-phase3" data-tab="phase3">Phase 3</button>
+        <button type="button" class="sim-tab" role="tab" aria-selected="false" aria-controls="panel-guide" data-tab="guide">Guide</button>
+      </nav>
+      <span class="status-pill" id="liveStatus">Ready</span>
+    </div>
+
+    <div class="error-box" id="errorBox" role="alert"></div>
+
+    <!-- Banker's -->
+    <div id="panel-bankers" class="tab-panel active" role="tabpanel">
+      <section class="panel tab-section">
+        <div class="run-bar">
+          <div class="run-bar-fields">
+            <div class="field inline-field">
+              <label for="demo_patients">Patients</label>
+              <input type="number" id="demo_patients" min="1" max="200" value="15">
+            </div>
+          </div>
+          <button type="button" id="btnBankers" class="btn btn-primary">Run Banker's</button>
+        </div>
+        <div class="result-banner compact" id="safetyResult">Awaiting run</div>
+        <div class="export-bar" id="export-bankers" hidden>
+          <span class="export-label">Download report</span>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="bankers" data-export-fmt="csv">CSV</button>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="bankers" data-export-fmt="pdf">PDF</button>
+        </div>
+      </section>
+
+      <section class="panel tab-section" id="section-state">
+        <h2>Resource State</h2>
+        <p class="section-desc" id="stateDesc">Allocation matrices appear after a Banker's run.</p>
+        <div class="vector-row vector-row-3">
+          <div class="vector-block">
+            <h3>Total Resources</h3>
+            <table class="matrix-table" id="tableTotal"><tbody></tbody></table>
+          </div>
+          <div class="vector-block">
+            <h3>Available Resources</h3>
+            <table class="matrix-table" id="tableAvailable"><tbody></tbody></table>
+          </div>
+          <div class="vector-block">
+            <h3>Work Vector (W = Available)</h3>
+            <table class="matrix-table" id="tableWork"><tbody></tbody></table>
+          </div>
+        </div>
+        <div class="matrix-group">
+          <h3>Allocation Matrix</h3>
+          <div class="table-scroll"><table class="matrix-table wide" id="tableAllocation"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="matrix-group">
+          <h3>Maximum (Max) Matrix</h3>
+          <div class="table-scroll"><table class="matrix-table wide" id="tableMax"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="matrix-group">
+          <h3>Need Matrix <span class="formula">Need = Max - Allocation</span></h3>
+          <div class="table-scroll"><table class="matrix-table wide" id="tableNeed"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="panel tab-section" id="section-bankers">
+        <h2>Safety Trace</h2>
+        <p class="section-desc" id="sequenceDesc"></p>
+        <div id="postMortemPanel" class="post-mortem" hidden></div>
+        <div class="steps-container" id="stepsContainer">
+          <p class="placeholder">Step-by-step safety checks will appear here.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Monte Carlo -->
+    <div id="panel-mc" class="tab-panel" role="tabpanel" hidden>
+      <section class="panel tab-section" id="section-live">
+        <div class="run-bar">
+          <p class="run-bar-hint">Uses max patients, trials, and seed from the configuration panel.</p>
+          <button type="button" id="btnMonteCarlo" class="btn btn-primary">Run Monte Carlo</button>
+        </div>
+
+        <div class="chart-header">
+          <h3>Collapse Probability</h3>
+          <button type="button" class="btn btn-text btn-small" id="btnExplainChart" aria-expanded="false">Explain the data</button>
+        </div>
+
+        <div class="chart-explain" id="chartExplain" hidden>
+          <p><strong>What this graph shows:</strong> Estimated P(collapse) as a function of patient count <em>n</em>, where collapse means either admission failure or an unsafe Banker's state.</p>
+          <p><strong>Estimation:</strong> For each <em>n</em> = 1, 2, ..., N, the simulator runs <em>T</em> independent trials. P&#770;(collapse | n) = K<sub>n</sub> / T.</p>
+          <p><strong>Confidence band:</strong> Wilson score 95% interval (z = 1.96).</p>
+          <p id="explainExternalNote" class="note"></p>
+        </div>
+
+        <div class="chart-area" id="chartArea">
+          <canvas id="mcChart"></canvas>
+          <p class="chart-placeholder" id="chartPlaceholder">Run Monte Carlo to plot the collapse-probability curve.</p>
+        </div>
+
+        <div class="mc-summary compact" id="mcSummary">
+          <div class="stat"><span class="stat-label">10% collapse</span><span class="stat-value" id="mcTh10">N/A</span></div>
+          <div class="stat"><span class="stat-label">50% collapse</span><span class="stat-value" id="mcTh50">N/A</span></div>
+          <div class="stat"><span class="stat-label">70% collapse</span><span class="stat-value" id="mcTh70">N/A</span></div>
+          <div class="stat"><span class="stat-label">Peak admit fail</span><span class="stat-value" id="mcPeakAdmit">N/A</span></div>
+          <div class="stat"><span class="stat-label">Peak unsafe</span><span class="stat-value" id="mcPeakUnsafe">N/A</span></div>
+          <div class="stat"><span class="stat-label">Trials / max n</span><span class="stat-value" id="mcTrialsMeta">N/A</span></div>
+        </div>
+
+        <div class="util-block">
+          <h3>Utilization at 50% threshold</h3>
+          <div id="utilTable"><p class="placeholder">N/A</p></div>
+        </div>
+        <div class="export-bar" id="export-mc" hidden>
+          <span class="export-label">Download report</span>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="mc" data-export-fmt="csv">CSV</button>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="mc" data-export-fmt="pdf">PDF</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- MC Experiment -->
+    <div id="panel-experiment" class="tab-panel" role="tabpanel" hidden>
+      <section class="panel tab-section" id="section-mc-experiment">
+        <h2>Streaming Monte Carlo Experiment</h2>
+        <p class="section-desc">Sweep with live progress and Wilson intervals. Resource capacities and severity mix come from the configuration panel.</p>
+
+        <div class="experiment-grid">
+          <div class="experiment-controls">
+            <div class="field">
+              <label for="exp_min_n">Minimum patient load</label>
+              <input type="number" id="exp_min_n" min="1" max="200" value="15">
+            </div>
+            <div class="field">
+              <label for="exp_max_n">Maximum patient load</label>
+              <input type="number" id="exp_max_n" min="1" max="200" value="40">
+            </div>
+            <div class="field">
+              <label for="exp_trials">Trials per patient count</label>
+              <input type="number" id="exp_trials" min="1" max="200" value="40">
+            </div>
+            <div class="field">
+              <label for="exp_model">Demand model</label>
+              <select id="exp_model">
+                <option value="A">A — Independent synthetic demand</option>
+                <option value="B" selected>B — Severity-conditioned demand</option>
+                <option value="C">C — Same static demand as B</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="exp_seed">Random seed</label>
+              <input type="number" id="exp_seed" value="42">
+            </div>
+            <div id="expConfigSummary" class="experiment-summary note">Configure the experiment, then run.</div>
+            <div class="actions">
+              <button type="button" id="btnMcExperiment" class="btn btn-primary">Run Experiment</button>
+              <button type="button" id="btnMcExperimentStop" class="btn btn-secondary" disabled>Stop</button>
+            </div>
+          </div>
+          <div class="experiment-live">
+            <div id="expProgress" class="experiment-progress">
+              <p class="placeholder">Waiting to run.</p>
+            </div>
+            <h3>Running estimate at current n</h3>
+            <p class="note">p̂<sub>t</sub> = K<sub>t</sub> / t with Wilson 95% interval. The 0.50 line is a reference, not n<sub>50</sub>.</p>
+            <div id="expConvPlot" class="plot-box"></div>
+            <h3>Collapse-probability curve</h3>
+            <p class="note">p̂<sub>n</sub> = K<sub>n</sub> / T after each load finishes. n<sub>50</sub> is the smallest tested n with p̂ ≥ 0.50.</p>
+            <div id="expCurvePlot" class="plot-box"></div>
+            <div id="expResultCard" class="experiment-card" hidden></div>
+            <div class="export-bar" id="export-experiment" hidden>
+              <span class="export-label">Download report</span>
+              <button type="button" class="btn btn-secondary btn-small" data-export-kind="experiment" data-export-fmt="csv">CSV</button>
+              <button type="button" class="btn btn-secondary btn-small" id="btnDlJson">JSON</button>
+              <button type="button" class="btn btn-secondary btn-small" data-export-kind="experiment" data-export-fmt="pdf">PDF</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Sensitivity -->
+    <div id="panel-sensitivity" class="tab-panel" role="tabpanel" hidden>
+      <section class="panel tab-section" id="section-sensitivity">
+        <h2>Sensitivity Analysis</h2>
+        <p class="section-desc">Isolated perturbation: C' = C + &Delta;c<sub>k</sub> e<sub>k</sub> for each resource k. Discrete marginal sensitivity &epsilon;<sub>k</sub> = (&Delta;n<sub>50</sub>) / &Delta;c<sub>k</sub> (local finite difference, not standard elasticity). Uses max patients and trials from configuration (capped server-side).</p>
+        <div class="run-bar">
+          <button type="button" id="btnSensitivity" class="btn btn-primary">Run Sensitivity</button>
+        </div>
+        <div class="export-bar" id="export-sensitivity" hidden>
+          <span class="export-label">Download report</span>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="sensitivity" data-export-fmt="csv">CSV</button>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="sensitivity" data-export-fmt="pdf">PDF</button>
+        </div>
+        <div id="sensitivityResults"><p class="placeholder">Results appear here after a run.</p></div>
+      </section>
+    </div>
+
+    <!-- Time Model -->
+    <div id="panel-timemodel" class="tab-panel" role="tabpanel" hidden>
+      <section class="panel tab-section" id="section-dynamic">
+        <h2>Time-Dependent Hospital (Phase 2)</h2>
+        <p class="section-desc">Staffing C(t), length of stay, fatigue delay, treatment bundles, overflow, and triage. Horizon and arrivals are in the configuration panel.</p>
+
+        <fieldset class="fieldset compact-fieldset">
+          <legend>Dynamic Staffing</legend>
+          <p class="note">Per-run multipliers for nurse capacity. Does not modify hospital_config.json.</p>
+          <div class="field-row">
+            <div class="field">
+              <label for="normal_staffing_multiplier">Normal</label>
+              <input type="number" id="normal_staffing_multiplier" min="0" max="3" step="0.05" value="1.00">
+            </div>
+            <div class="field">
+              <label for="handover_staffing_multiplier">Handover</label>
+              <input type="number" id="handover_staffing_multiplier" min="0" max="3" step="0.05" value="0.80">
+            </div>
+            <div class="field">
+              <label for="weekend_staffing_multiplier">Weekend</label>
+              <input type="number" id="weekend_staffing_multiplier" min="0" max="3" step="0.05" value="0.90">
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="run-bar">
+          <button type="button" id="btnDynamic" class="btn btn-primary">Run Time Model</button>
+        </div>
+        <div class="export-bar" id="export-timemodel" hidden>
+          <span class="export-label">Download report</span>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="timemodel" data-export-fmt="csv">CSV</button>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="timemodel" data-export-fmt="pdf">PDF</button>
+        </div>
+        <div id="dynamicResults"><p class="placeholder">Click "Run Time Model" to simulate a discrete-time hospital trajectory.</p></div>
+      </section>
+    </div>
+
+    <!-- Phase 3 -->
+    <div id="panel-phase3" class="tab-panel" role="tabpanel" hidden>
+      <section class="panel tab-section" id="section-phase3">
+        <h2>Empirical Calibration (Phase 3)</h2>
+        <p class="section-desc">Static Banker collapse analysis and dynamic empirically informed simulation. Public epidemiological series are a demand signal, not real-time hospital occupancy.</p>
+        <div class="run-bar">
+          <button type="button" id="btnPhase3" class="btn btn-primary">Run Phase 3 Calibration</button>
+        </div>
+        <div class="export-bar" id="export-phase3" hidden>
+          <span class="export-label">Download report</span>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="phase3" data-export-fmt="csv">CSV</button>
+          <button type="button" class="btn btn-secondary btn-small" data-export-kind="phase3" data-export-fmt="pdf">PDF</button>
+        </div>
+        <div id="phase3Results"><p class="placeholder">Click "Run Phase 3 Calibration" to ingest data and compare models.</p></div>
+      </section>
+    </div>
+
+    <!-- Guide -->
+    <div id="panel-guide" class="tab-panel" role="tabpanel" hidden>
+      <section class="panel tab-section" id="section-interpret">
+        <h2>Interpretation &amp; Limitations</h2>
+        <div class="interpretation">
+          <p><strong>SAFE</strong> means a completion ordering exists: each patient can obtain its remaining need (Need &le; Work) and release its allocation.</p>
+          <p><strong>UNSAFE</strong> means no such ordering exists under the current allocation state.</p>
+          <p><strong>P(collapse)</strong> is estimated by Monte Carlo sampling: fraction of trials where admission fails or the state is unsafe. Wilson 95% confidence intervals are shown on the chart.</p>
+          <p><strong>Limitations:</strong> Maximum demands are assumed known (Banker's requirement). Hospital capacity is simplified to five resource types. External epidemiological data is a workload signal, not hospital occupancy. Results are model-based, not clinical predictions.</p>
+        </div>
+      </section>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/export.js"></script>
+<script src="/static/script.js"></script>
+{% endblock %}

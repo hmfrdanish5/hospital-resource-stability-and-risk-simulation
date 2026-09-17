@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hospital Resource Stability Lab — Brief Report</title>
+  <style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; color: #1f1f24; line-height: 1.55; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { color: #5c1522; border-bottom: 2px solid #5c1522; padding-bottom: 0.4rem; font-size: 1.6rem; }
+    h2 { color: #5c1522; font-size: 1.1rem; margin-top: 1.4rem; }
+    .subtitle { color: #5a5a66; margin-bottom: 1.5rem; }
+    ul { margin: 0.4rem 0 0.8rem 1.2rem; }
+    li { margin-bottom: 0.35rem; }
+    .pitch { background: #fdf5f6; border-left: 4px solid #7a1f2e; padding: 0.8rem 1rem; margin: 1rem 0; }
+    .meta { font-size: 0.9rem; color: #5a5a66; }
+    @media print { body { margin: 0; max-width: none; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <p class="no-print meta">Print this page (Ctrl+P) and choose &ldquo;Save as PDF&rdquo; if you need another copy.</p>
+
+  <h1>Hospital Resource Stability Lab</h1>
+  <p class="subtitle">Brief Project Report — Pandemic Healthcare Stability Analysis<br>
+  <span class="meta">September 2026 · Phases 1–3 complete</span></p>
+
+  <h2>What this is</h2>
+  <p>An <strong>academic simulation</strong> of hospital resource allocation under pandemic-like pressure. It asks:</p>
+  <ul>
+    <li>Is the current allocation state <strong>SAFE</strong>? (Banker&rsquo;s Algorithm)</li>
+    <li>As load grows, what is <strong>P(collapse)</strong>? (Monte Carlo)</li>
+  </ul>
+  <p>Not a live hospital system or clinical tool. Results are <strong>model-based</strong>.</p>
+
+  <h2>Core model (Phase 1)</h2>
+  <ul>
+    <li>Five resources: ICU beds, oxygen, ventilators, nurses, blood units</li>
+    <li>Need = Max &minus; Allocation; Banker&rsquo;s safety (SAFE / UNSAFE)</li>
+    <li>Monte Carlo with Wilson 95% CIs; collapse = admission failure or unsafe state</li>
+    <li>Per-resource elasticity: &epsilon;<sub>k</sub> = &Delta;n<sub>50</sub> / &Delta;c<sub>k</sub></li>
+  </ul>
+
+  <h2>Time-dependent hospital (Phase 2)</h2>
+  <ul>
+    <li>Discrete time (1 h): staffing C(t), LOS, fatigue, treatment bundles</li>
+    <li><strong>ED_OVERFLOW</strong> when bundles fail — not automatic collapse</li>
+    <li>Triage by severity; Banker&rsquo;s remains a separate snapshot each step</li>
+  </ul>
+
+  <h2>Empirical calibration (Phase 3)</h2>
+  <ul>
+    <li>OWID, UKHSA, Rees et al. 2020 LoS — provenance in <code>data_sources.json</code></li>
+    <li>Poisson vs NB arrivals; Gamma / Weibull / Lognormal LOS compared</li>
+    <li>Model A (independent) vs B (severity-conditioned) vs C (calibrated)</li>
+    <li>No copula — observations vs assumptions vs derived vs simulated are labeled</li>
+  </ul>
+
+  <h2>How to run</h2>
+  <ul>
+    <li>Dashboard: <code>cd pandemic_dashboard &amp;&amp; python app.py</code> → http://127.0.0.1:5000</li>
+    <li>Tests: <code>python tests/run_tests.py</code> (68 tests)</li>
+  </ul>
+
+  <h2>Limitations</h2>
+  <ul>
+    <li>Abstract five-resource model; max demand assumed known</li>
+    <li>National data &ne; your hospital&rsquo;s census</li>
+    <li>Surge capacity often yields P(unsafe) &asymp; 0</li>
+    <li>Not clinically validated</li>
+  </ul>
+
+  <div class="pitch">
+    <strong>One-sentence pitch:</strong> A reproducible academic lab combining Banker&rsquo;s deadlock avoidance,
+    Monte Carlo collapse risk, discrete-time hospital dynamics, and optional public-data calibration —
+    with clear separation between observations, assumptions, and simulation.
+  </div>
+
+  <h2>Questions for feedback</h2>
+  <ul>
+    <li>Are the five resources plausible for your setting?</li>
+    <li>Is overflow vs Banker&rsquo;s UNSAFE the right stress vs deadlock split?</li>
+    <li>Local CSV upload vs national APIs for Phase 3?</li>
+    <li>Baseline vs surge capacity for your narrative?</li>
+    <li>Is A/B/C the right experiment for a paper?</li>
+  </ul>
+</body>
+</html>

@@ -1,0 +1,5 @@
+Baseline test suite (audit freeze)
+Date: 2026-09-11
+Command: python tests/run_tests.py
+Result: 68 passed, 0 failed
+Status: project starts from this baseline

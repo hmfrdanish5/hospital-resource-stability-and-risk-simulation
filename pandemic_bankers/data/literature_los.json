@@ -1,0 +1,34 @@
+{
+  "classification": "REAL_OBSERVATION",
+  "observation_type": "published_summary_statistics",
+  "not_patient_level_microdata": true,
+  "citation": "Rees EM, Nightingale ES, Jafari Y, et al. COVID-19 length of hospital stay: a systematic review and data synthesis. BMC Medicine. 2020;18:270.",
+  "doi": "10.1186/s12916-020-01726-3",
+  "url": "https://doi.org/10.1186/s12916-020-01726-3",
+  "publisher": "BMC Medicine",
+  "license": "CC-BY 4.0",
+  "access_date": "2026-09-11",
+  "time_coverage": "Studies available by 2020 (early pandemic)",
+  "current_vs_historical": "historical_published_evidence",
+  "selection": "outside_china_summary_distributions",
+  "selection_reason": "The hospital model is not a China-specific facility; Rees et al. report a separate outside-China summary.",
+  "hospital_los_days": {
+    "median": 5,
+    "q25": 3,
+    "q75": 9,
+    "unit": "days",
+    "classification": "REAL_OBSERVATION"
+  },
+  "icu_los_days": {
+    "median": 7,
+    "q25": 4,
+    "q75": 11,
+    "unit": "days",
+    "classification": "REAL_OBSERVATION"
+  },
+  "transformations": [
+    "Median and IQR transcribed from the article summary distributions (outside China).",
+    "Candidate continuous distributions are matched to these three quantiles (DERIVED_PARAMETER).",
+    "Samples drawn from the chosen distribution are SIMULATED_VALUE."
+  ]
+}
